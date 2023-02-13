@@ -19,6 +19,6 @@ export OMP_NUM_THREADS=10
 
 python -m torch.distributed.launch --nproc_per_node=$GPUS --master_port=$PORT --use_env \
 train.py \
-   --cfg configs/bebr.yaml \
+   --cfg configs/$1 \
    --batch-size 4096 \
    --tag coco_clip

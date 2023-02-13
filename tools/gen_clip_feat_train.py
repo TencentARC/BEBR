@@ -61,9 +61,9 @@ for batch_idx, batch in enumerate(valid_dataloader):
     cnt = cnt + step
 
 train_label = train_label[:cnt]
-np.save('train_label.npy', train_label)
+np.save('./dataset/train_eval/train_label.npy', train_label)
 
 train_feat_all = train_feat_all[:cnt]
 # normalized features
 train_feat_all = train_feat_all / np.linalg.norm(train_feat_all, axis=1)[:, np.newaxis]
-np.save('train_feat_RN101.npy', train_feat_all)
+np.save('./dataset/train_eval/train_feat_RN101.npy', train_feat_all)
