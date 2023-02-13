@@ -1,0 +1,40 @@
+MODEL:
+  NAME: hash_from_feat
+DATA:
+  TRAIN_FEAT: './dataset/train_eval/train_feat_RN101.npy'
+  QUERY_FEAT: './dataset/train_eval/val_img_feat_RN101.npy'
+  GALLERY_FEAT: './dataset/train_eval/val_txt_feat_RN101.npy'
+TRAIN:
+  EPOCHS: 10
+  WARMUP_EPOCHS: 0
+  WEIGHT_DECAY: 1e-3
+  BASE_LR: 0.08
+  LR_SCHEDULER:
+    NAME: step
+    DECAY_EPOCHS: 6
+  OPTIMIZER:
+    NAME: sgd
+  LOSS:
+    NAME: pairwise_contrastive
+    TYPE: rbe_loss
+    HARD_TOPK: 5
+    TEMP: 0.05
+    MARGIN: 200.0
+BINARY:
+  ACTIVATE: True
+  TRAIN:
+    PROXY_LOSS: False # no need for st_var
+  TRANS: # new2old / old2new transformation modules
+    TYPE: rbe_norm
+    RBE:
+      INPUT_DIM: 512
+      OUTPUT_DIM: 1024
+      NUM_LAYERS: 0 # recurrent times for rbe
+      HIDDEN_DIM: 1536
+      TRANSFORM_BLOCKS: 3
+      BIAS: True
+      BINARY_FUNC: st_var
+
+SAVE_FREQ: 1
+EVAL_FREQ: 1
+PRINT_FREQ: 100
