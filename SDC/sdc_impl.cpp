@@ -51,8 +51,7 @@ void rbe_kernel_scan(
         int nsq,
         const uint8_t* codes,
         const uint16_t* norms,
-        const uint8_t* LUT) {
-     uint16_t* res;
+        const uint8_t* LUT, uint16_t* res) {
     __m256i accu[NQ][4];
 
     for (int q = 0; q < NQ; q++) {
@@ -144,7 +143,6 @@ int IndexRbeScan::add(int n,int bit_num, const uint8_t* x) {
         }
     }
 
-
     for (int i=0; i<row_num ; i++){
         for(int j=0; j < col_num; j++ ){
             codes.push_back( temp_x[ j*(code8_nums+1) + i ]);
@@ -163,29 +161,32 @@ void IndexRbeScan::search(int n, const uint8_t *x, int bit_num, int k)
     int nsq = bit_num / 4;  // 256/4 =32
     constexpr int Q1 = QBS & 15;
 
-    std::vector<uint8_t> lut_index_code;
-    convert(n,bit_num,x,lut_index_code);
-    for(int i=0; i < code4_nums*n; i++){
-        for(int j =0; j<16; j++){
-            lookuptable.push_back(centroids[lut_index_code[i] + j]);
-        }
-    }
-
     std::vector<uint16_t> res;
+    res.resize(n*ntotal);
+
     const uint16_t* Norm = &norms[0];
     const uint8_t* Code = &codes[0];
-    const uint8_t* LUT = &lookuptable[0];
+    uint16_t* Res = res.data();
+    
+    for (int i=0;i <n; i=i+QBS){
 
-    for(int64_t j0 = 0; j0 < ntotal; j0 += 32) {
-        // uint16_t* Res = &res[0];
+        std::vector<uint8_t> lut_index_code;
+        convert(QBS,bit_num,x+(code8_nums+1),lut_index_code);
+        for(int i=0; i < code4_nums*n; i++){
+            for(int j =0; j<16; j++){
+                lookuptable.push_back(centroids[lut_index_code[i] + j]);
+            }
+        }
 
-        // const uint8_t *Norm = norms.data();
-        // const uint8_t *Code = codes.data();
-        // const uint8_t *LUT = lookuptable.data();
-        rbe_kernel_scan<Q1>(nsq, Code, Norm, LUT);
-        LUT += Q1 * nsq * 16;
-        Code += 32 * nsq / 2;
-        Norm += 32;
+        for(int64_t j0 = 0; j0 < ntotal; j0 += 32) {
+            const uint8_t* LUT = &lookuptable[0];
+            rbe_kernel_scan<Q1>(nsq, Code, Norm, LUT,Res);
+            LUT += Q1 * nsq * 16;
+            Code += 32 * nsq / 2;
+            Norm += 32;
+        }
+        lookuptable.clear();
+        std::vector<uint8_t> ().swap(lookuptable);
     }
     return ;
 }
