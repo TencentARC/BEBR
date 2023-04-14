@@ -157,4 +157,41 @@ class PairwiseContrastiveLoss(nn.Module):
         loss_a, loss_b = calculate_loss(logits_a, logits_b, labels_idx, masks, self.loss_type, batch_size, self.criterion, self.hard_topk_neg)
         return loss_a + loss_b
 
+class PairwiseCompatibleLoss(PairwiseContrastiveLoss):
 
+    def forward(self, inputs, inputs_old, targets, vids):
+        if not self.no_norm:
+            # features l2-norm
+            z = F.normalize(inputs, dim=1, p=2)
+            z_old = F.normalize(inputs_old, dim=1, p=2).detach()
+        else:
+            z = inputs
+            z_old = inputs_old.detach()
+
+        # split into pairs
+        batch_size = z.size(0)//2
+        hidden1, hidden2 = split_pair(z)
+        hidden1_old, hidden2_old = split_pair(z_old)
+
+        # gather from all gpus
+        hidden1_large = gather_tensor(hidden1)
+        hidden2_large = gather_tensor(hidden2)
+        hidden1_old_large = gather_tensor(hidden1_old)
+        hidden2_old_large = gather_tensor(hidden2_old)
+
+        enlarged_batch_size = hidden1_large.size(0)
+
+        # create label
+        labels_idx = torch.arange(batch_size) + dist.get_rank() * batch_size
+        masks = torch.zeros(batch_size, enlarged_batch_size).scatter_(1, labels_idx.unsqueeze(1), 1).cuda()
+
+        # calculate logits
+        logits_a, logits_b = calculate_dist(hidden1, hidden2, hidden1_old_large, hidden2_old_large, masks, self.loss_type, self.temperature)
+
+        # remove duplicated vid
+        if self.rm_duplicated:
+            logits_a, logits_b = rm_same_vid(logits_a, logits_b, vids, masks, batch_size, enlarged_batch_size, self.loss_type)
+
+        # compute loss
+        loss_a, loss_b = calculate_loss(logits_a, logits_b, labels_idx, masks, self.loss_type, batch_size, self.criterion, self.hard_topk_neg)
+        return loss_a + loss_b
