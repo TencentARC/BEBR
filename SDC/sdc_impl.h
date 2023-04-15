@@ -7,10 +7,8 @@ class IndexRbeScan{
     // size of the kernel
     int bbs;     // set at build time
     int qbs = 0; // query block size 0 = use default
-
-    // packed version of the codes
     int ntotal;
-    int M2;
+    int M2; // the sub-space number
 
 
     std::vector<uint8_t> lookuptable;
@@ -24,9 +22,9 @@ class IndexRbeScan{
 
     void convert(int n, int bit_nums, const uint8_t* x, std::vector<uint8_t>& codes);
 
-    int add(int n,int bit_nums, const uint8_t* x);
+    int add(int n,int bit_nums, const float* x);
 
-    void search(int n, const uint8_t *x, int bit_num, int k);
+    void search(int n, const float *x, int bit_num, int k);
 
 
 };
