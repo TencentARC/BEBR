@@ -17,6 +17,24 @@
 #include <boost/algorithm/string.hpp>
 #include<fstream>  
 
+
+#include <immintrin.h>
+#include <iostream>
+#include <iomanip>    
+
+template<class T> 
+inline void Log(const __m256i & value)
+{
+    const size_t n = sizeof(__m256i) / sizeof(T);
+    T buffer[n];
+    _mm256_storeu_si256((__m256i*)buffer, value);
+    for (int i = 0; i < n; i++)
+        printf("%u,",buffer[i]);
+        // std::cout << buffer[i] << " ";
+    printf("\n");
+}
+
+
 void split_string_label(std::string str, std::vector<int>& vec_data){
 	std::vector<std::string> lineItems;
 	boost::split(lineItems,str,boost::is_any_of(" "));
