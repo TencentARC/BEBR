@@ -65,11 +65,11 @@ void rbe_kernel_scan(
 			// Log<uint8_t>(lut);
 			__m256i res0 = _mm256_shuffle_epi8(lut, clo);
 			__m256i res1 = _mm256_shuffle_epi8(lut, chi);
-            Log<uint8_t> (lut);
-            Log<uint8_t> (clo);
-            Log<uint8_t> (chi);
-            Log<uint8_t> (res0);
-            Log<uint8_t> (res1);
+            // Log<uint8_t> (lut);
+            // Log<uint8_t> (clo);
+            // Log<uint8_t> (chi);
+            // Log<uint8_t> (res0);
+            // Log<uint8_t> (res1);
 			accu[q][0] += res0;
 			accu[q][1] += _mm256_srli_epi16(res0,8);
 			accu[q][2] += res1;
@@ -81,12 +81,12 @@ void rbe_kernel_scan(
 	// norms +=16;
 	// __m256i temp_norm1 = _mm256_load_si256((__m256i const*)norms);
 
-	// __m256i temp_norm0 = loadu_si256i(norms);
-	// norms+=16;
-	// __m256i temp_norm1 = loadu_si256i(norms);
+	__m256i temp_norm0 = loadu_si256i(norms);
+	norms+=16;
+	__m256i temp_norm1 = loadu_si256i(norms);
 
-    __m256i temp_norm0 = _mm256_set1_epi16(0x01);
-    __m256i temp_norm1 = _mm256_set1_epi16(0x01);
+    // __m256i temp_norm0 = _mm256_set1_epi16(0x01);
+    // __m256i temp_norm1 = _mm256_set1_epi16(0x01);
 
 
 	for (int q = 0; q < NQ; q++) {
@@ -97,8 +97,8 @@ void rbe_kernel_scan(
 		_mm256_storeu_si256((__m256i*)res, dis_norm0);
 		_mm256_storeu_si256((__m256i*)(res+16), dis_norm1);
 		// printf("%f",dis_norm0)
-		printf("%u\n", (unsigned int)res[0]);
-		printf("%u\n", (unsigned int)res[1]);
+		// printf("%u\n", (unsigned int)res[0]);
+		// printf("%u\n", (unsigned int)res[1]);
 	}
 }
 
