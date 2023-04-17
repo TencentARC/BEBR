@@ -79,15 +79,15 @@ void rbe_kernel_scan(
 	}
 	printf("[kernel] start load norm\n");
 
-	// __m256i temp_norm0 = loadu_si256i(norms);
-	// norms+=16;
-	// __m256i temp_norm1 = loadu_si256i(norms);
+	__m256i temp_norm0 = loadu_si256i(norms);
+	norms+=16;
+	__m256i temp_norm1 = loadu_si256i(norms);
 
 	// Log<uint16_t> (temp_norm0);
 	// Log<uint16_t> (temp_norm1);
 
-    __m256i temp_norm0 = _mm256_set1_epi16(0x01);
-    __m256i temp_norm1 = _mm256_set1_epi16(0x01);
+    // __m256i temp_norm0 = _mm256_set1_epi16(0x01);
+    // __m256i temp_norm1 = _mm256_set1_epi16(0x01);
 
 
 	for (int q = 0; q < Number_Query; q++) {
