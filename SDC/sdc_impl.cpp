@@ -18,9 +18,8 @@ inline __m256i rbe_combine2x2(__m256i a, __m256i b, __m256i c) {
 	__m256i a1b0 = _mm256_permute2f128_si256(a, b, 0x21);
 	__m256i a0b1 = _mm256_blend_epi32(a, b, 0xF0);
 	__m256i ab = _mm256_add_epi16(a1b0,a0b1);
-	// return simd16uint16(ab);
-	// __m256i sub_ab = _mm256_set1_epi16(sub_constx[0]);
-	// __m256i sub_ab = _mm256_set1_epi16(408);
+
+	// __m256i sub_ab = _mm256_set1_epi16(576);
 	// ab = _mm256_sub_epi16(ab, sub_ab);
 	__m256i lo = _mm256_mullo_epi16(ab, c);
 	return lo;
@@ -153,24 +152,27 @@ int IndexRbeScan::add(int n, int bit_num, const float* x) {
 			uint8_t first_code = (uint8_t) temp_x[ (j*2)*(code8_nums + 1) + i ];
 			uint8_t second_code = (uint8_t) temp_x[ (j*2+1)*(code8_nums+1) + i];
 			uint8_t the_code = (first_code & 240) |  ((second_code>>4) & 15);
-			if ((i==0) & (j==0)){
-				printf("%u,%u,%u,%u,%u",first_code,second_code ,first_code&240 , ((second_code>>4) & 15), the_code);
-				printf("\n"); 
+			// if ((i==0) ){
+				// printf("%u,%u,%u,%u,%u",first_code,second_code ,first_code&240 , ((second_code>>4) & 15), the_code);
+				// printf("\n"); 
 				// 28: 00011100  28,76,16,4,20  00010000 01000000>>4
-			}
+				// printf("%u,", (first_code&240)>>4);
+			// }
 			codes.push_back(the_code);
 		}
+		printf(" || ");
 		for (int j=0; j < col_num/2; j++ ) {
 			uint8_t first_code = (uint8_t) temp_x[ (j*2)*(code8_nums + 1) + i ];
 			uint8_t second_code = (uint8_t) temp_x[ (j*2+1)*(code8_nums+1) + i];
-			uint8_t the_code = ((first_code & 15) << 4 ) ||  (second_code & 15);
-			if ((i==0) & (j==0)){
-				printf("%u,%u,%u,%u,%u",first_code,second_code ,((first_code & 15) << 4 ) ,  (second_code & 15), the_code);
-				printf("\n");
-			}
+			uint8_t the_code = ((first_code & 15) << 4 ) |  (second_code & 15);
+			// if ((i==0)){
+				// printf("%u,%u,%u,%u,%u",first_code,second_code ,((first_code & 15) << 4 ) ,  (second_code & 15), the_code);
+				// printf("\n");
+				// printf("%u,",(first_code & 15));
+			// }
 			codes.push_back(the_code);
-            // printf(" %u,", (uint8_t) temp_x[ j*(code8_nums+1) + i ]);
 		}
+		// printf("\n");
 	}
 
 	for (int i=0; i<ntotal;i++) {
@@ -260,9 +262,9 @@ void IndexRbeScan::search(int n, const float *x, int bit_num, int k) {
 	return ;
 }
 int main() {
-	int nq=2;
+	int nq=1;
 	//default nq = 31642
-	int k=20;
+	int k=40;
 	// nb of results per query in the GT
 	int nb=nq*k;
 	// default nb = 629331
@@ -272,7 +274,7 @@ int main() {
 	std::string query_codebook =
 	            "../data/python/q_rbe_uint8.txt";
 	std::string db_codebook =
-	            "../data/python/q_rbe_uint8.txt";
+	            "../data/python/db_rbe_uint8.txt";
 	std::vector<float> xq = load_codebook_file(query_codebook,nq);
 	std::vector<float> xb =  load_codebook_file(db_codebook,nb);
 	// for(int i=0; i<xq.size();i++){

@@ -29,7 +29,7 @@ inline void Log(const __m256i & value)
     T buffer[n];
     _mm256_storeu_si256((__m256i*)buffer, value);
     for (int i = 0; i < n; i++){
-        if (i==15){
+        if (i==16){
             printf(" || ");
         }
         printf("%u,",buffer[i]);
