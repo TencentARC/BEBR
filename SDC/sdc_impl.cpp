@@ -14,27 +14,28 @@ const uint8_t centroids[16 * 16] = {
 inline size_t roundup(size_t a, size_t b) {
 	return (a + b - 1) / b * b;
 }
+
 inline __m256i rbe_combine2x2(__m256i a, __m256i b, __m256i c) {
 	__m256i a1b0 = _mm256_permute2f128_si256(a, b, 0x21);
 	__m256i a0b1 = _mm256_blend_epi32(a, b, 0xF0);
 	__m256i ab = _mm256_add_epi16(a1b0,a0b1);
 
-	// __m256i sub_ab = _mm256_set1_epi16(576);
-	// ab = _mm256_sub_epi16(ab, sub_ab);
+	__m256i sub_ab = _mm256_set1_epi16(576);
+	ab = _mm256_sub_epi16(ab, sub_ab);
 	__m256i lo = _mm256_mullo_epi16(ab, c);
 	return lo;
 }
 template <class T>
 static inline __m256i loadu_si256i(T *ptr) {
-	// return _mm256_loadu_si256((__m256i *)ptr);
 	return _mm256_lddqu_si256((__m256i *)ptr);
 }
+
 template <int Number_Query>
 void rbe_kernel_scan(
         int number_sq,
         const uint8_t* codes,
         const uint16_t* norms,
-        const uint8_t* LUT, uint16_t* res) {
+        const uint8_t* LUT, int16_t* res) {
 	printf("[kernel] start scan\n");
 	__m256i accu[Number_Query][4];
 	for (int q = 0; q < Number_Query; q++) {
@@ -44,7 +45,6 @@ void rbe_kernel_scan(
 	}
 	printf("[kernel] finish assign accu\n");
 	for (int idx_sq = 0; idx_sq < number_sq; idx_sq += 2) {
-		// printf("%u\n", (unsigned int)codes[0]);
 		// __m256i c = _mm256_load_si256((__m256i const*)codes);
 		__m256i c = loadu_si256i(codes);
 		codes += 32;
@@ -56,7 +56,7 @@ void rbe_kernel_scan(
 		// __m256i code_lo = _mm256_set1_epi8(0x1);
 		// Log<uint8_t>(c);
 		for (int q = 0; q < Number_Query; q++) {
-			// load LUTs for 2 quantizers
+
 			// __m256i lut = _mm256_load_si256((__m256i const*)LUT);
 			__m256i lut = loadu_si256i(LUT);
 			LUT += 32;
@@ -70,10 +70,10 @@ void rbe_kernel_scan(
             // Log<uint8_t> (res1);
 			// printf("\n");
 
-			accu[q][0] += res0;
-			accu[q][1] += _mm256_srli_epi16(res0,8);
-			accu[q][2] += res1;
-			accu[q][3] += _mm256_srli_epi16(res1,8);
+			accu[q][0] = _mm256_add_epi16(accu[q][0], res0);
+			accu[q][1] = _mm256_add_epi16(accu[q][1], _mm256_srli_epi16(res0,8));
+			accu[q][2] = _mm256_add_epi16(accu[q][2], res1);
+			accu[q][3] = _mm256_add_epi16(accu[q][3], _mm256_srli_epi16(res1,8));
 		}
 	}
 	printf("[kernel] start load norm\n");
@@ -88,11 +88,10 @@ void rbe_kernel_scan(
     // __m256i temp_norm0 = _mm256_set1_epi16(0x01);
     // __m256i temp_norm1 = _mm256_set1_epi16(0x01);
 
-
 	for (int q = 0; q < Number_Query; q++) {
-		accu[q][0] -= _mm256_slli_epi16(accu[q][1], 8 );
+		accu[q][0] = _mm256_sub_epi16(accu[q][0], _mm256_slli_epi16(accu[q][1], 8 ));
 		__m256i dis_norm0 = rbe_combine2x2(accu[q][0], accu[q][1], temp_norm0);
-		accu[q][2] -= _mm256_slli_epi16(accu[q][3], 8 );
+		accu[q][2] = _mm256_sub_epi16(accu[q][2], _mm256_slli_epi16(accu[q][3], 8 ));
 		__m256i dis_norm1 = rbe_combine2x2(accu[q][2], accu[q][3], temp_norm1);
 		_mm256_storeu_si256((__m256i*)res, dis_norm0);
 		_mm256_storeu_si256((__m256i*)(res+16), dis_norm1);
@@ -110,7 +109,6 @@ void IndexRbeScan::convert(int n, int bit_num, const uint8_t* x, std::vector<uin
 		codes.push_back(first_code);
 		codes.push_back(second_code);
 		printf(" %i %u %u %u ||", i , x[i],first_code,second_code);
-		// printf(" %u %u ||",first_code,second_code);
 	}
 	printf("\n");
 	return ;
@@ -160,7 +158,7 @@ int IndexRbeScan::add(int n, int bit_num, const float* x) {
 			// }
 			codes.push_back(the_code);
 		}
-		printf(" || ");
+		// printf(" || ");
 		for (int j=0; j < col_num/2; j++ ) {
 			uint8_t first_code = (uint8_t) temp_x[ (j*2)*(code8_nums + 1) + i ];
 			uint8_t second_code = (uint8_t) temp_x[ (j*2+1)*(code8_nums+1) + i];
@@ -193,7 +191,7 @@ void IndexRbeScan::search(int n, const float *x, int bit_num, int k) {
 
 	std::cout<< "start to compute the distance" <<std::endl;
 
-    std::vector<uint16_t> res;
+    std::vector<int16_t> res;
     res.resize(ntotal);
     std::vector<int> index(res.size(), 0);
     for (int i = 0 ; i != index.size() ; i++) {
@@ -210,7 +208,7 @@ void IndexRbeScan::search(int n, const float *x, int bit_num, int k) {
 		}
 	}
 	for (int i=0;i <n; i=i+QBS) {
-        uint16_t* Res = res.data();
+        int16_t* Res = res.data();
 
 		std::vector<uint8_t> lut_index_code;
 		convert(QBS, bit_num, temp_x.data()+i*(code8_nums+1), lut_index_code);
@@ -231,7 +229,6 @@ void IndexRbeScan::search(int n, const float *x, int bit_num, int k) {
 			Norm += 32;
 			Res += 32;
 		}
-
 
         for (int i = 0 ; i != index.size() ; i++) {
             index[i] = i;
@@ -262,9 +259,9 @@ void IndexRbeScan::search(int n, const float *x, int bit_num, int k) {
 	return ;
 }
 int main() {
-	int nq=1;
+	int nq=2;
 	//default nq = 31642
-	int k=40;
+	int k=20;
 	// nb of results per query in the GT
 	int nb=nq*k;
 	// default nb = 629331
