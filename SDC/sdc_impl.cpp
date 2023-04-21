@@ -9,11 +9,36 @@
 #include "utils.h"
 const uint8_t centroids[16 * 16] = {
 18,15,12,9,15,12,9,6,12,9,6,3,9,6,3,0,15,14,13,12,12,11,10,9,9,8,7,6,6,5,4,3,12,13,14,15,9,10,11,12,6,7,8,9,3,4,5,6,9,12,15,18,6,9,12,15,3,6,9,12,0,3,6,9,15,12,9,6,14,11,8,5,13,10,7,4,12,9,6,3,12,11,10,9,11,10,9,8,10,9,8,7,9,8,7,6,9,10,11,12,8,9,10,11,7,8,9,10,6,7,8,9,6,9,12,15,5,8,11,14,4,7,10,13,3,6,9,12,12,9,6,3,13,10,7,4,14,11,8,5,15,12,9,6,9,8,7,6,10,9,8,7,11,10,9,8,12,11,10,9,6,7,8,9,7,8,9,10,8,9,10,11,9,10,11,12,3,6,9,12,4,7,10,13,5,8,11,14,6,9,12,15,9,6,3,0,12,9,6,3,15,12,9,6,18,15,12,9,6,5,4,3,9,8,7,6,12,11,10,9,15,14,13,12,3,4,5,6,6,7,8,9,9,10,11,12,12,13,14,15,0,3,6,9,3,6,9,12,6,9,12,15,9,12,15,18
+};
+
+
+int reorganize(int16_t * data){
+	std::vector<int16_t> temp_buff;
+	for(int i=0;i<32;i++){
+		int index = i/4;
+		if (i%4 ==0){
+			index = index;
+		} else if (i%4 ==1)
+		{
+			index =index+16;
+		}
+		else if (i%4==2){
+			index = index + 8;
+		}
+		else if (i%4 ==3){
+			index = index + 24;
+		}
+		temp_buff.push_back(data[index]);
+	}
+	for (int i=0; i <32 ; i++){
+		data[i] = temp_buff[i];
+	}
+	return 0;
 }
-;
+
 inline size_t roundup(size_t a, size_t b) {
 	return (a + b - 1) / b * b;
-}
+} 
 
 inline __m256i rbe_combine2x2(__m256i a, __m256i b, __m256i c) {
 	__m256i a1b0 = _mm256_permute2f128_si256(a, b, 0x21);
@@ -36,6 +61,7 @@ void rbe_kernel_scan(
         const uint8_t* codes,
         const uint16_t* norms,
         const uint8_t* LUT, int16_t* res) {
+
 	printf("[kernel] start scan\n");
 	__m256i accu[Number_Query][4];
 	for (int q = 0; q < Number_Query; q++) {
@@ -43,6 +69,7 @@ void rbe_kernel_scan(
 			accu[q][b] = _mm256_setzero_si256();
 		}
 	}
+
 	printf("[kernel] finish assign accu\n");
 	for (int idx_sq = 0; idx_sq < number_sq; idx_sq += 2) {
 		// __m256i c = _mm256_load_si256((__m256i const*)codes);
@@ -98,6 +125,7 @@ void rbe_kernel_scan(
 		// printf("%f",dis_norm0)
 		// printf("%u\n", (unsigned int)res[0]);
 		// printf("%u\n", (unsigned int)res[1]);
+		reorganize(res);
 	}
 }
 
@@ -108,9 +136,9 @@ void IndexRbeScan::convert(int n, int bit_num, const uint8_t* x, std::vector<uin
 		uint8_t second_code = x[i] & 15;
 		codes.push_back(first_code);
 		codes.push_back(second_code);
-		printf(" %i %u %u %u ||", i , x[i],first_code,second_code);
+		// printf(" %i %u %u %u ||", i , x[i],first_code,second_code);
 	}
-	printf("\n");
+	// printf("\n");
 	return ;
 }
 
@@ -125,8 +153,10 @@ int IndexRbeScan::add(int n, int bit_num, const float* x) {
 	ntotal = roundup(n,32);
 	std::cout << ntotal<<std::endl;
 	int col_num = 32;
-	int row_num = (ntotal/32) * M2 /2;
+	int row_num = 32;
+	int block_num = ntotal/32;
 	int lack_num = ntotal - n;
+	std::cout<< "n: "<< n <<std::endl;
 	std::cout<< "total number:"<< ntotal << " lack num:" << lack_num<<std::endl;
 	std::cout<< "bit_num:"<< bit_num <<" code8_nums:" << code8_nums <<std::endl;
 	std::cout<< "col_num:"<< col_num <<" row_num:" << row_num <<std::endl;
@@ -142,40 +172,53 @@ int IndexRbeScan::add(int n, int bit_num, const float* x) {
 			temp_x.push_back(0);
 		}
 	}
+
+	// for(int i=0;i<64;i++){
+	// 	for(int j=0; j<33; j++){
+	// 		printf("%u,",(uint8_t)temp_x[i*33+j]);
+	// 	}
+	// 	printf("\n");
+	// }
+
 	
 	std::cout << "finish the temp data prepare"<< std::endl;
 	// std::cout << temp_x[33] << std::endl;
-	for (int i=0; i<row_num ; i = i+1) {
- 		for (int j=0; j < col_num/2; j++ ) {
-			uint8_t first_code = (uint8_t) temp_x[ (j*2)*(code8_nums + 1) + i ];
-			uint8_t second_code = (uint8_t) temp_x[ (j*2+1)*(code8_nums+1) + i];
-			uint8_t the_code = (first_code & 240) |  ((second_code>>4) & 15);
-			// if ((i==0) ){
-				// printf("%u,%u,%u,%u,%u",first_code,second_code ,first_code&240 , ((second_code>>4) & 15), the_code);
-				// printf("\n"); 
-				// 28: 00011100  28,76,16,4,20  00010000 01000000>>4
-				// printf("%u,", (first_code&240)>>4);
+	for(int b=0; b < block_num; b++){
+		for (int i=0; i < row_num ; i++) {
+			for (int j=0; j < col_num/2; j++ ) {
+				uint8_t first_code = (uint8_t) temp_x[b*32*(code8_nums + 1) + (j*2)*(code8_nums + 1) + i ];
+				uint8_t second_code = (uint8_t) temp_x[b*32*(code8_nums + 1) + (j*2+1)*(code8_nums + 1) + i];
+				uint8_t the_code = (first_code & 240) |  ((second_code>>4) & 15);
+				// if ((i==0) ){
+				// 	printf("%u,%u,%u,%u,%u | ",first_code,second_code ,first_code&240 , ((second_code>>4) & 15), the_code);
+				// 	printf("%u,", first_code >> 4 );
+				// 	printf("%u,", second_code >> 4 );
+				// }
+				codes.push_back(the_code);
+			}
+			// if(i==0){
+			// 	printf(" || ");
 			// }
-			codes.push_back(the_code);
-		}
-		// printf(" || ");
-		for (int j=0; j < col_num/2; j++ ) {
-			uint8_t first_code = (uint8_t) temp_x[ (j*2)*(code8_nums + 1) + i ];
-			uint8_t second_code = (uint8_t) temp_x[ (j*2+1)*(code8_nums+1) + i];
-			uint8_t the_code = ((first_code & 15) << 4 ) |  (second_code & 15);
-			// if ((i==0)){
-				// printf("%u,%u,%u,%u,%u",first_code,second_code ,((first_code & 15) << 4 ) ,  (second_code & 15), the_code);
-				// printf("\n");
-				// printf("%u,",(first_code & 15));
+			for (int j=0; j < col_num/2; j++ ) {
+				uint8_t first_code = (uint8_t) temp_x[b*32*(code8_nums + 1) + (j*2)*(code8_nums + 1) + i ];
+				uint8_t second_code = (uint8_t) temp_x[b*32*(code8_nums + 1) + (j*2+1)*(code8_nums + 1) + i];
+				uint8_t the_code = ((first_code & 15) << 4 ) |  (second_code & 15);
+				// if ((i==0)){
+				// 	printf("%u,%u,%u,%u,%u | ",first_code,second_code ,((first_code & 15) << 4 ) ,  (second_code & 15), the_code);
+				// 	printf("%u,", first_code & 15 );
+				// 	printf("%u,", second_code & 15 );
+				// }
+				codes.push_back(the_code);
+			}
+			// if (i==0){
+			// 	printf("\n");
 			// }
-			codes.push_back(the_code);
 		}
-		// printf("\n");
 	}
 
 	for (int i=0; i<ntotal;i++) {
 		norms.push_back( (uint16_t) (temp_x[ (i+1) * (code8_nums+1)-1]*512) );
-		printf(" %u,", norms[i]);
+		// printf(" %u,", norms[i]);
 	}
 	std::cout << "finish the temp data prepare"<< std::endl;
 	return 0;
