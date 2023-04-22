@@ -1,0 +1,10 @@
+/apdcephfs/private_yangelfang/yangelfang/data/test/test_data_source/9B4HsW7IqdT_315_354_1.jpg 0
+/apdcephfs/private_yangelfang/yangelfang/data/test/test_data_source/a00263i1mgx_1323_1386_1.jpg 1
+/apdcephfs/private_yangelfang/yangelfang/data/test/test_data_source/a0026uommnj_3069_3120_1.jpg 2
+/apdcephfs/private_yangelfang/yangelfang/data/test/test_data_source/a002731ialm_0_387_1.jpg 3
+/apdcephfs/private_yangelfang/yangelfang/data/test/test_data_source/a0027bqkemi_0_291_1.jpg 4
+/apdcephfs/private_yangelfang/yangelfang/data/test/test_data_source/a00282d19a9_129_144_1.jpg 5
+/apdcephfs/private_yangelfang/yangelfang/data/test/test_data_source/a00284x82nx_180_231_1.jpg 6
+/apdcephfs/private_yangelfang/yangelfang/data/test/test_data_source/a00286goiu6_0_75_1.jpg 7
+/apdcephfs/private_yangelfang/yangelfang/data/test/test_data_source/a0028c4o5xu_3_90_1.jpg 8
+/apdcephfs/private_yangelfang/yangelfang/data/test/test_data_source/a0028lb0a1s_207_234_1.jpg 9

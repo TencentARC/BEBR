@@ -122,9 +122,6 @@ void rbe_kernel_scan(
 		__m256i dis_norm1 = rbe_combine2x2(accu[q][2], accu[q][3], temp_norm1);
 		_mm256_storeu_si256((__m256i*)res, dis_norm0);
 		_mm256_storeu_si256((__m256i*)(res+16), dis_norm1);
-		// printf("%f",dis_norm0)
-		// printf("%u\n", (unsigned int)res[0]);
-		// printf("%u\n", (unsigned int)res[1]);
 		reorganize(res);
 	}
 }
@@ -138,7 +135,7 @@ void IndexRbeScan::convert(int n, int bit_num, const uint8_t* x, std::vector<uin
 		codes.push_back(second_code);
 		// printf(" %i %u %u %u ||", i , x[i],first_code,second_code);
 	}
-	// printf("\n");
+	printf("\n");
 	return ;
 }
 
@@ -150,14 +147,15 @@ IndexRbeScan::IndexRbeScan(int nbits) {
 int IndexRbeScan::add(int n, int bit_num, const float* x) {
 	int code4_nums = bit_num/4;
 	int code8_nums = bit_num/8;
-	ntotal = roundup(n,32);
-	std::cout << ntotal<<std::endl;
+	ntotal = n;
+	ntotal32 = roundup(n,32);
+	std::cout << ntotal32<<std::endl;
 	int col_num = 32;
 	int row_num = 32;
-	int block_num = ntotal/32;
-	int lack_num = ntotal - n;
+	int block_num = ntotal32/32;
+	int lack_num = ntotal32 - n;
 	std::cout<< "n: "<< n <<std::endl;
-	std::cout<< "total number:"<< ntotal << " lack num:" << lack_num<<std::endl;
+	std::cout<< "total number:"<< ntotal32 << " lack num:" << lack_num<<std::endl;
 	std::cout<< "bit_num:"<< bit_num <<" code8_nums:" << code8_nums <<std::endl;
 	std::cout<< "col_num:"<< col_num <<" row_num:" << row_num <<std::endl;
 	std::vector<float> temp_x;
@@ -172,14 +170,6 @@ int IndexRbeScan::add(int n, int bit_num, const float* x) {
 			temp_x.push_back(0);
 		}
 	}
-
-	// for(int i=0;i<64;i++){
-	// 	for(int j=0; j<33; j++){
-	// 		printf("%u,",(uint8_t)temp_x[i*33+j]);
-	// 	}
-	// 	printf("\n");
-	// }
-
 	
 	std::cout << "finish the temp data prepare"<< std::endl;
 	// std::cout << temp_x[33] << std::endl;
@@ -216,44 +206,49 @@ int IndexRbeScan::add(int n, int bit_num, const float* x) {
 		}
 	}
 
-	for (int i=0; i<ntotal;i++) {
+	for (int i=0; i<ntotal32;i++) {
 		norms.push_back( (uint16_t) (temp_x[ (i+1) * (code8_nums+1)-1]*512) );
 		// printf(" %u,", norms[i]);
 	}
 	std::cout << "finish the temp data prepare"<< std::endl;
 	return 0;
 }
-void IndexRbeScan::search(int n, const float *x, int bit_num, int k) {
+std::vector<int> IndexRbeScan::search(int n, const float *x, int bit_num, int k) {
 	const int QBS = 1;
 	int code4_nums = bit_num / 4;
 	int code8_nums = bit_num / 8;
 	int nsq = bit_num / 4;
 	// 256/4 =32
 	constexpr int Q1 = QBS & 15;
-	std::cout<< "num of querys:" <<n<< "ntotal:"<<ntotal<<std::endl;
+	std::cout<< "num of querys:" <<n<<" ntotal: "<<ntotal << "ntotal32:"<<ntotal32<<std::endl;
 
 	std::cout<< "start to compute the distance" <<std::endl;
-
+	
+	k = std::min(ntotal,k);
+	std::vector<int> res_idx;
     std::vector<int16_t> res;
-    res.resize(ntotal);
+    res.resize(ntotal32);
     std::vector<int> index(res.size(), 0);
     for (int i = 0 ; i != index.size() ; i++) {
         index[i] = i;
     }
 
-	const uint16_t* Norm = &norms[0];
-	const uint8_t* Code = &codes[0];
+
 
 	std::vector<uint8_t> temp_x;
 	for (int i=0; i< n; i++) {
-		for (int j=0; j<code8_nums; j++) {
+		for (int j=0; j<code8_nums+1; j++) {
 			temp_x.push_back( (uint8_t)x[i*(code8_nums+1)+j] );
 		}
 	}
+
+	std::vector<uint8_t> lut_index_code;
+
 	for (int i=0;i <n; i=i+QBS) {
         int16_t* Res = res.data();
+		const uint16_t* Norm = &norms[0];
+		const uint8_t* Code = &codes[0];
 
-		std::vector<uint8_t> lut_index_code;
 		convert(QBS, bit_num, temp_x.data()+i*(code8_nums+1), lut_index_code);
 		std::cout<< "lut_index_code shape" <<lut_index_code.size()<<std::endl;
 		for (int i=0; i < QBS * code4_nums ; i++) {
@@ -264,7 +259,7 @@ void IndexRbeScan::search(int n, const float *x, int bit_num, int k) {
             // printf("\n");
 		}
 		std::cout << "lookuptable shape: " << lookuptable.size() << std::endl;
-		for (int64_t j0 = 0; j0 < ntotal; j0 += 32) {
+		for (int64_t j0 = 0; j0 < ntotal32; j0 += 32) {
 			const uint8_t* LUT = &lookuptable[0];
 			rbe_kernel_scan<Q1>(nsq, Code, Norm, LUT, Res);
 			LUT += Q1 * nsq * 16;
@@ -282,9 +277,27 @@ void IndexRbeScan::search(int n, const float *x, int bit_num, int k) {
             return (res[a] > res[b]);
         }
         );
-        for (int i = 0 ; i != index.size() ; i++) {
-            std::cout << "index:"<<index[i] << " distance:" << res[index[i]]<<" , ";
-        }
+		
+		int temp_cout=0;
+		int temp_idx=0;
+		while (temp_cout<k){
+			if (index[temp_idx]>ntotal){
+				// printf("%u,%u,",temp_idx,index[temp_idx]);
+				temp_idx++;
+			}else{
+				printf("%u,",index[temp_idx]);
+				res_idx.push_back(index[temp_idx]);
+				temp_cout++;
+				temp_idx++;
+			}	
+		}
+
+
+		// for(int idx=0; idx<k;idx++){
+		// 	res_idx.push_back(index[idx]);
+
+		// }
+
         res.clear();
 
 		lut_index_code.clear();
@@ -297,12 +310,10 @@ void IndexRbeScan::search(int n, const float *x, int bit_num, int k) {
 
 	}
 
-
-
-	return ;
+	return res_idx;
 }
 int main() {
-	int nq=2;
+	int nq=10;
 	//default nq = 31642
 	int k=20;
 	// nb of results per query in the GT
@@ -311,17 +322,36 @@ int main() {
 	int bit_nums=256;
 	int depth = 2;
 	printf("[rbe] prepare train/databse/query set\n");
-	std::string query_codebook =
-	            "../data/python/q_rbe_uint8.txt";
-	std::string db_codebook =
-	            "../data/python/db_rbe_uint8.txt";
+
+	std::string query_codebook = "../data/python/q_rbe_uint8.txt";
+	std::string db_codebook = "../data/python/db_rbe_uint8.txt";
+	std::string query_label = "../data/python/q_label_small.txt";
+	std::string db_label = "../data/python/db_label_small.txt";
+
 	std::vector<float> xq = load_codebook_file(query_codebook,nq);
 	std::vector<float> xb =  load_codebook_file(db_codebook,nb);
-	// for(int i=0; i<xq.size();i++){
-	// std::cout<<xq[i]<<std::endl;
-	// }
+	std::vector<int> xq_label = load_codebook_file_label(query_label,nq);
+	std::vector<int> xb_label = load_codebook_file_label(db_label,nb);
+
 	IndexRbeScan idx_rbe(256);
 	idx_rbe.add(nb,bit_nums,xb.data());
-	idx_rbe.search(nq,xq.data(),bit_nums,k);
+	std::vector<int> res_idx = idx_rbe.search(nq,xq.data(),bit_nums,k);
+
+	// for (int i=0; i<res_idx.size(); i++){
+	// 	printf("%u, %u, \n",i,res_idx[i]);
+	// }
+
+	int n_1 = 0, n_10 = 0, n_20 = 0, n_100 = 0;
+	for (int i = 0; i < nq; i++) {
+		int gt_nn = xq_label[i];
+		for (int j = 0; j < k; j++) {
+			if (xb_label[res_idx[i * k + j]] == gt_nn) {
+				n_20++;
+			}
+		}
+	}
+
+	printf("R@20 = %.4f\n", n_20 / float(nb));
+
 	return 0;
 }

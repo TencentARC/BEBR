@@ -8,6 +8,7 @@ class IndexRbeScan{
     int bbs;     // set at build time
     int qbs = 0; // query block size 0 = use default
     int ntotal;
+    int ntotal32;
     int M2; // the sub-space number
 
 
@@ -24,7 +25,7 @@ class IndexRbeScan{
 
     int add(int n,int bit_nums, const float* x);
 
-    void search(int n, const float *x, int bit_num, int k);
+    std::vector<int> search(int n, const float *x, int bit_num, int k);
 
 
 };
