@@ -292,12 +292,6 @@ std::vector<int> IndexRbeScan::search(int n, const float *x, int bit_num, int k)
 			}	
 		}
 
-
-		// for(int idx=0; idx<k;idx++){
-		// 	res_idx.push_back(index[idx]);
-
-		// }
-
         res.clear();
 
 		lut_index_code.clear();
@@ -336,10 +330,6 @@ int main() {
 	IndexRbeScan idx_rbe(256);
 	idx_rbe.add(nb,bit_nums,xb.data());
 	std::vector<int> res_idx = idx_rbe.search(nq,xq.data(),bit_nums,k);
-
-	// for (int i=0; i<res_idx.size(); i++){
-	// 	printf("%u, %u, \n",i,res_idx[i]);
-	// }
 
 	int n_1 = 0, n_10 = 0, n_20 = 0, n_100 = 0;
 	for (int i = 0; i < nq; i++) {
