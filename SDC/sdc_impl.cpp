@@ -72,7 +72,6 @@ void rbe_kernel_scan(
 
 	printf("[kernel] finish assign accu\n");
 	for (int idx_sq = 0; idx_sq < number_sq; idx_sq += 2) {
-		// __m256i c = _mm256_load_si256((__m256i const*)codes);
 		__m256i c = loadu_si256i(codes);
 		codes += 32;
 
@@ -80,22 +79,13 @@ void rbe_kernel_scan(
 		__m256i code_hi = _mm256_srli_epi16(c,4);
 		code_hi = _mm256_and_si256(code_hi, mask);
 		__m256i code_lo = _mm256_and_si256(c,mask);
-		// __m256i code_lo = _mm256_set1_epi8(0x1);
-		// Log<uint8_t>(c);
+
 		for (int q = 0; q < Number_Query; q++) {
 
-			// __m256i lut = _mm256_load_si256((__m256i const*)LUT);
 			__m256i lut = loadu_si256i(LUT);
 			LUT += 32;
 			__m256i res0 = _mm256_shuffle_epi8(lut, code_hi);
 			__m256i res1 = _mm256_shuffle_epi8(lut, code_lo);
-     
-	        // Log<uint8_t> (lut);
-            // Log<uint8_t> (code_hi);
-            // Log<uint8_t> (code_lo);
-            // Log<uint8_t> (res0);
-            // Log<uint8_t> (res1);
-			// printf("\n");
 
 			accu[q][0] = _mm256_add_epi16(accu[q][0], res0);
 			accu[q][1] = _mm256_add_epi16(accu[q][1], _mm256_srli_epi16(res0,8));
@@ -108,12 +98,6 @@ void rbe_kernel_scan(
 	__m256i temp_norm0 = loadu_si256i(norms);
 	norms+=16;
 	__m256i temp_norm1 = loadu_si256i(norms);
-
-	// Log<uint16_t> (temp_norm0);
-	// Log<uint16_t> (temp_norm1);
-
-    // __m256i temp_norm0 = _mm256_set1_epi16(0x01);
-    // __m256i temp_norm1 = _mm256_set1_epi16(0x01);
 
 	for (int q = 0; q < Number_Query; q++) {
 		accu[q][0] = _mm256_sub_epi16(accu[q][0], _mm256_slli_epi16(accu[q][1], 8 ));
@@ -172,37 +156,21 @@ int IndexRbeScan::add(int n, int bit_num, const float* x) {
 	}
 	
 	std::cout << "finish the temp data prepare"<< std::endl;
-	// std::cout << temp_x[33] << std::endl;
 	for(int b=0; b < block_num; b++){
 		for (int i=0; i < row_num ; i++) {
 			for (int j=0; j < col_num/2; j++ ) {
 				uint8_t first_code = (uint8_t) temp_x[b*32*(code8_nums + 1) + (j*2)*(code8_nums + 1) + i ];
 				uint8_t second_code = (uint8_t) temp_x[b*32*(code8_nums + 1) + (j*2+1)*(code8_nums + 1) + i];
 				uint8_t the_code = (first_code & 240) |  ((second_code>>4) & 15);
-				// if ((i==0) ){
-				// 	printf("%u,%u,%u,%u,%u | ",first_code,second_code ,first_code&240 , ((second_code>>4) & 15), the_code);
-				// 	printf("%u,", first_code >> 4 );
-				// 	printf("%u,", second_code >> 4 );
-				// }
 				codes.push_back(the_code);
 			}
-			// if(i==0){
-			// 	printf(" || ");
-			// }
+
 			for (int j=0; j < col_num/2; j++ ) {
 				uint8_t first_code = (uint8_t) temp_x[b*32*(code8_nums + 1) + (j*2)*(code8_nums + 1) + i ];
 				uint8_t second_code = (uint8_t) temp_x[b*32*(code8_nums + 1) + (j*2+1)*(code8_nums + 1) + i];
 				uint8_t the_code = ((first_code & 15) << 4 ) |  (second_code & 15);
-				// if ((i==0)){
-				// 	printf("%u,%u,%u,%u,%u | ",first_code,second_code ,((first_code & 15) << 4 ) ,  (second_code & 15), the_code);
-				// 	printf("%u,", first_code & 15 );
-				// 	printf("%u,", second_code & 15 );
-				// }
 				codes.push_back(the_code);
 			}
-			// if (i==0){
-			// 	printf("\n");
-			// }
 		}
 	}
 
@@ -221,7 +189,6 @@ std::vector<int> IndexRbeScan::search(int n, const float *x, int bit_num, int k)
 	// 256/4 =32
 	constexpr int Q1 = QBS & 15;
 	std::cout<< "num of querys:" <<n<<" ntotal: "<<ntotal << "ntotal32:"<<ntotal32<<std::endl;
-
 	std::cout<< "start to compute the distance" <<std::endl;
 	
 	k = std::min(ntotal,k);
@@ -232,8 +199,6 @@ std::vector<int> IndexRbeScan::search(int n, const float *x, int bit_num, int k)
     for (int i = 0 ; i != index.size() ; i++) {
         index[i] = i;
     }
-
-
 
 	std::vector<uint8_t> temp_x;
 	for (int i=0; i< n; i++) {
