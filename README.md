@@ -4,7 +4,7 @@
 ![BEBR](BEBR.png)
 
 ## Usage
-First, install Pytorch 1.13.1 (or later) and torchvision, as well as some additional depencecices
+First, install Pytorch 1.13.1 (or later) and torchvision, as well as some additional dependencies
 ```bash
 $ conda install pytorch torchvision torchaudio pytorch-cuda=11.6 -c pytorch -c nvidia
 $ git clone https://github.com/ganyk/BEBR.git
